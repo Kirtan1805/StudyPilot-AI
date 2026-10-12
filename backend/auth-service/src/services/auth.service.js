@@ -1,6 +1,7 @@
 
 const bcrypt = require("bcrypt");
 const pool = require("../config/db");
+const jwt = require("jsonwebtoken");
 
 async function registerUser(email, password) {
   const normalizedEmail = email.trim().toLowerCase();
@@ -31,4 +32,60 @@ async function registerUser(email, password) {
   return result.rows[0];
 }
 
-module.exports = { registerUser };
+// Add this function alongside your existing registerUser function.
+async function loginUser(email, password) {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const result = await pool.query(
+    `SELECT id, email, password_hash, email_verified
+     FROM users
+     WHERE LOWER(email) = $1`,
+    [normalizedEmail]
+  );
+
+  const user = result.rows[0];
+
+  // Use the same error for unknown email and incorrect password.
+  if (!user) {
+    const error = new Error("Invalid email or password");
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const passwordMatches = await bcrypt.compare(
+    password,
+    user.password_hash
+  );
+
+  if (!passwordMatches) {
+    const error = new Error("Invalid email or password");
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const accessToken = jwt.sign(
+    {
+      sub: user.id,
+      email: user.email
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN || "15m",
+      issuer: "studypilot-auth"
+    }
+  );
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      email_verified: user.email_verified
+    },
+    accessToken
+  };
+}
+
+module.exports = {
+  registerUser,
+  loginUser
+};

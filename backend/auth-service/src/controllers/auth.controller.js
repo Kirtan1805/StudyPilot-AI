@@ -1,6 +1,10 @@
 
-const { registerUser } = require("../services/auth.service");
-const { loginUser } = require("../services/auth.service");
+const {
+  registerUser,
+  loginUser,
+  refreshAccessToken,
+  logoutUser
+} = require("../services/auth.service");
 
 const register = async (req, res) => {
   try {
@@ -91,7 +95,8 @@ const login = async (req, res) => {
       status: "success",
       message: "Login successful",
       user: result.user,
-      accessToken: result.accessToken
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken
     });
   } catch (error) {
     if (error.statusCode === 401) {
@@ -110,9 +115,78 @@ const login = async (req, res) => {
   }
 };
 
+const refresh = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (typeof refreshToken !== "string" || !refreshToken) {
+      return res.status(400).json({
+        status: "error",
+        message: "Refresh token is required"
+      });
+    }
+
+    const result = await refreshAccessToken(refreshToken);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Access token refreshed successfully",
+      accessToken: result.accessToken
+    });
+  } catch (error) {
+    if (error.statusCode === 401) {
+      return res.status(401).json({
+        status: "error",
+        message: "Invalid or expired refresh token"
+      });
+    }
+
+    console.error("Token refresh error:", error.message);
+
+    return res.status(500).json({
+      status: "error",
+      message: "Unable to refresh access token"
+    });
+  }
+};
+
+const logout = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (typeof refreshToken !== "string" || !refreshToken) {
+      return res.status(400).json({
+        status: "error",
+        message: "Refresh token is required"
+      });
+    }
+
+    await logoutUser(refreshToken);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Logout successful"
+    });
+  } catch (error) {
+    if (error.statusCode === 401) {
+      return res.status(401).json({
+        status: "error",
+        message: error.message
+      });
+    }
+
+    console.error("Logout error:", error.message);
+
+    return res.status(500).json({
+      status: "error",
+      message: "Unable to log out"
+    });
+  }
+};
 
 module.exports = {
   register,
-  login
+  login,
+  refresh,
+  logout
 };
-

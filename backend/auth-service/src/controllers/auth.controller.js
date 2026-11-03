@@ -130,14 +130,15 @@ const refresh = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      message: "Access token refreshed successfully",
-      accessToken: result.accessToken
+      message: "Tokens refreshed successfully",
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken
     });
   } catch (error) {
     if (error.statusCode === 401) {
       return res.status(401).json({
         status: "error",
-        message: "Invalid or expired refresh token"
+        message: error.message
       });
     }
 
@@ -145,7 +146,7 @@ const refresh = async (req, res) => {
 
     return res.status(500).json({
       status: "error",
-      message: "Unable to refresh access token"
+      message: "Unable to refresh tokens"
     });
   }
 };
